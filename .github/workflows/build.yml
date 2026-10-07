@@ -1,0 +1,126 @@
+# Builds one service of a teacher's lab and publishes it to ghcr.io, for mitsurutech.co.uk.
+#
+# **Why this repository exists.** A lab's compose file may build a service from a Dockerfile
+# in the teacher's own GitHub repository. Running that Dockerfile on our lab machines would
+# mean a weakened container on a box students share; running it here means GitHub's own
+# throwaway machine does it, and the lab machines only ever pull a finished image.
+#
+# **Started by the website when a teacher presses Publish**, by `workflow_dispatch` with a
+# token that can do nothing else. Public repositories only: the teacher's repository is
+# checked out with no credential at all, so a private one fails to check out, and the
+# website refuses to ask for one in the first place.
+#
+# **Every input is checked before it is used and none is ever written into a script**: each
+# reaches the shell as an environment variable, never as `${{ }}` inside `run:`, which is
+# GitHub's own advice against script injection.
+name: Build a lab image
+run-name: "lab ${{ inputs.request }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      request:
+        description: The website's id for this build, so it can find the run again.
+        required: true
+      repository:
+        description: The teacher's public repository, https://github.com/owner/name.
+        required: true
+      commit:
+        description: The full commit to build, never a branch.
+        required: true
+      context:
+        description: The build folder inside the repository.
+        required: true
+        default: "."
+      dockerfile:
+        description: The Dockerfile, relative to the folder. Empty is Dockerfile.
+        required: false
+        default: ""
+      build_args:
+        description: Build arguments as a JSON object of strings.
+        required: false
+        default: "{}"
+      tag:
+        description: The tag under ghcr.io/mitsurutech/lab-images.
+        required: true
+
+permissions: {}
+
+# One build of one tag at a time: two teachers cannot publish one lab's commit together, and
+# a second press of Publish waits for the first rather than racing it.
+concurrency:
+  group: ${{ inputs.tag }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REPOSITORY: ${{ inputs.repository }}
+      COMMIT: ${{ inputs.commit }}
+      CONTEXT: ${{ inputs.context }}
+      DOCKERFILE: ${{ inputs.dockerfile }}
+      BUILD_ARGS: ${{ inputs.build_args }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - name: Check what was asked for
+        id: checked
+        run: |
+          set -euo pipefail
+          [[ "$REPOSITORY" =~ ^https://github\.com/([A-Za-z0-9-]+)/([A-Za-z0-9._-]+?)(\.git)?$ ]] \
+            || { echo "::error::Not a GitHub repository: $REPOSITORY"; exit 1; }
+          echo "repo=${BASH_REMATCH[1]}/${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
+          [[ "$COMMIT" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Not a commit"; exit 1; }
+          [[ "$TAG" =~ ^[0-9a-f]{12}-[a-z0-9-]{1,63}-[0-9a-f]{12}$ ]] \
+            || { echo "::error::Not a lab tag"; exit 1; }
+          for path in "$CONTEXT" "$DOCKERFILE"; do
+            [[ "$path" != /* && "$path" != *..* && "$path" =~ ^[A-Za-z0-9._/-]*$ ]] \
+              || { echo "::error::A path outside the repository: $path"; exit 1; }
+          done
+          dir="${CONTEXT#./}"; dir="${dir%/}"; [[ -z "$dir" ]] && dir="."
+          file="${DOCKERFILE:-Dockerfile}"
+          echo "context=src/$dir" >> "$GITHUB_OUTPUT"
+          echo "file=src/$dir/${file#./}" >> "$GITHUB_OUTPUT"
+          # Build arguments: a JSON object of single-line strings, as NAME=value lines.
+          args=$(jq -er 'to_entries | map(select(.key | test("^[A-Za-z_][A-Za-z0-9_]*$"))
+                         | select(.value | type == "string" and (contains("\n") | not))
+                         | "\(.key)=\(.value)") | .[]' <<< "$BUILD_ARGS" || true)
+          {
+            echo "args<<END_OF_ARGS"
+            echo "$args"
+            echo "END_OF_ARGS"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check out the teacher's repository at the commit, with no credential
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ steps.checked.outputs.repo }}
+          ref: ${{ inputs.commit }}
+          path: src
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ steps.checked.outputs.context }}
+          file: ${{ steps.checked.outputs.file }}
+          build-args: ${{ steps.checked.outputs.args }}
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ghcr.io/mitsurutech/lab-images:${{ inputs.tag }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/mitsurutech/lab-builder
+            org.opencontainers.image.revision=${{ inputs.commit }}
+            org.opencontainers.image.url=${{ inputs.repository }}
