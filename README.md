@@ -1,7 +1,7 @@
-# lab-builder
+# lab-builder: build container lab images from a teacher's public GitHub repository
 
-Builds the services of a [MitsuruTech](https://mitsurutech.co.uk) lab from a teacher's
-public GitHub repository, and publishes each image to
+Builds the services of a [MitsuruTech container lab](https://mitsurutech.co.uk/help/labs) from a
+teacher's public GitHub repository, and publishes each image to
 [`ghcr.io/mitsurutech/lab-images`](https://github.com/orgs/mitsurutech/packages/container/package/lab-images).
 
 A lab is a set of containers described by a compose file. When a teacher publishes a commit
@@ -17,3 +17,11 @@ never built into the image.
 Builds run on GitHub's own runners, started only by the website with a token that can do
 nothing else. To report an image that should not be here, write to the address on
 mitsurutech.co.uk/contact.
+
+## About
+
+Made by [Mitsuru Technologies](https://mitsurutech.co.uk) for the
+[MitsuruTech Learning Platform](https://mitsurutech.co.uk/learning): Python, Java, Go, Node, SQL and
+Linux in the browser for schools and colleges, with container labs, web apps deployed from GitHub, and
+quizzes that mark themselves. Try code with no account in the
+[playground](https://mitsurutech.co.uk/playground).
