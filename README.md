@@ -1,5 +1,7 @@
 # lab-builder: build container lab images from a teacher's public GitHub repository
 
+[English](README.md) | [Français](README.fr.md) | [日本語](README.ja.md) | [Español](README.es.md)
+
 Builds the services of a [MitsuruTech container lab](https://mitsurutech.co.uk/help/labs) from a
 teacher's public GitHub repository, and publishes each image to
 [`ghcr.io/mitsurutech/lab-images`](https://github.com/orgs/mitsurutech/packages/container/package/lab-images).
@@ -18,6 +20,10 @@ Builds run on GitHub's own runners, started only by the website with a token tha
 nothing else. To report an image that should not be here, write to the address on
 mitsurutech.co.uk/contact.
 
+## Licence
+
+This work is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). You may share it and adapt it for learning and teaching, if you credit Mitsuru Technologies Ltd, do not use it commercially, and share anything you make from it under the same licence. The full text is in the `LICENSE` file.
+
 ## About
 
 Made by [Mitsuru Technologies](https://mitsurutech.co.uk) for the
@@ -25,3 +31,5 @@ Made by [Mitsuru Technologies](https://mitsurutech.co.uk) for the
 Linux in the browser for schools and colleges, with container labs, web apps deployed from GitHub, and
 quizzes that mark themselves. Try code with no account in the
 [playground](https://mitsurutech.co.uk/playground).
+
+Teaching a class? See [the price](https://mitsurutech.co.uk/pricing) or [create a college account](https://mitsurutech.co.uk/signup).
