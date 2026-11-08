@@ -160,3 +160,31 @@ jobs:
             org.opencontainers.image.source=https://github.com/mitsurutech/lab-builder
             org.opencontainers.image.revision=${{ inputs.commit }}
             org.opencontainers.image.url=${{ inputs.repository }}
+
+      # What was published, read back from the registry. **The media type matters**: the
+      # website decides an image can be pulled by asking for an OCI index or an image manifest,
+      # so a Docker manifest list would be a build that succeeds and a Publish that never
+      # completes, and that is better said here than found there. The architectures are said
+      # because a teacher whose Dockerfile only builds for x86 should see that, not discover it
+      # when a lab will not start on an Arm machine.
+      - name: Say what was published
+        env:
+          IMAGE: ghcr.io/mitsurutech/lab-images:${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          raw=$(docker buildx imagetools inspect --raw "$IMAGE")
+          kind=$(jq -r '.mediaType // "an image manifest"' <<< "$raw")
+          archs=$(jq -r 'if .manifests then [.manifests[] | select(.platform.os != "unknown") | .platform | "\(.os)/\(.architecture)"] | join(", ") else "linux/amd64" end' <<< "$raw")
+          echo "Published $IMAGE: $archs ($kind)"
+          {
+            echo "### Published"
+            echo "\`$IMAGE\` for **$archs**."
+            case "$archs" in
+              *arm64*) ;;
+              *) echo "No Arm image: the Arm build did not succeed, so this lab runs on x86 machines only." ;;
+            esac
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$kind" = "application/vnd.docker.distribution.manifest.list.v2+json" ]; then
+            echo "::error::Published as a Docker manifest list, which the website's pull check does not ask for: this image would never be pinned."
+            exit 1
+          fi
