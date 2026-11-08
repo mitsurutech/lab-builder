@@ -54,7 +54,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The website gives up on a build after half an hour, so the whole of this has to end well
+    # inside that: at most ten minutes of the two-architecture attempt below, then the x86
+    # build it falls back to, which that attempt's cache makes quick.
+    timeout-minutes: 28
     permissions:
       contents: read
       packages: write
@@ -102,6 +105,11 @@ jobs:
           path: src
           persist-credentials: false
 
+      # Emulation for the Arm build below, which GitHub's x86 machine cannot run natively.
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
@@ -110,7 +118,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and publish
+      # **Both architectures, and the x86 image regardless.** Our Oracle lab machine is Arm
+      # (Ampere A1), where an image built for x86 alone fails with "exec format error". But a
+      # teacher's Dockerfile is not ours to know the Arm build of: one that downloads an x86-only
+      # binary builds on amd64 and fails on arm64. So the two are tried together first, for ten
+      # minutes because emulation is slow, and when that fails or runs out the image is built
+      # exactly as it always was, x86 alone, quickly, from the cache the attempt left. **A lab
+      # is never refused for want of an Arm image**: one without it just cannot run on an Arm
+      # machine. Published without provenance, so the tag is a plain OCI index and the
+      # website's anonymous "can this be pulled" check, which asks for one, accepts it.
+      - name: Build and publish for x86 and Arm
+        id: both
+        continue-on-error: true
+        timeout-minutes: 10
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ steps.checked.outputs.context }}
+          file: ${{ steps.checked.outputs.file }}
+          build-args: ${{ steps.checked.outputs.args }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: false
+          tags: ghcr.io/mitsurutech/lab-images:${{ inputs.tag }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/mitsurutech/lab-builder
+            org.opencontainers.image.revision=${{ inputs.commit }}
+            org.opencontainers.image.url=${{ inputs.repository }}
+
+      - name: Build and publish for x86 alone
+        if: ${{ steps.both.outcome != 'success' }}
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: ${{ steps.checked.outputs.context }}
