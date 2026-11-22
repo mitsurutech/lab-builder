@@ -1,6 +1,6 @@
 # lab-builder：教員の公開 GitHub リポジトリからコンテナラボのイメージをビルド
 
-[English](README.md) | [Français](README.fr.md) | [日本語](README.ja.md) | [Español](README.es.md)
+[English](README.md) | [Français](README.fr.md) | [Español](README.es.md) | [日本語](README.ja.md) | [Deutsch](README.de.md)
 
 教員の公開 GitHub リポジトリから、[MitsuruTech のコンテナラボ](https://mitsurutech.co.uk/ja/help/labs)のサービスをビルドし、
 各イメージを

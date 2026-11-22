@@ -1,6 +1,6 @@
 # lab-builder: construye imágenes de laboratorios de contenedores desde el repositorio público de GitHub de un profesor
 
-[English](README.md) | [Français](README.fr.md) | [日本語](README.ja.md) | [Español](README.es.md)
+[English](README.md) | [Français](README.fr.md) | [Español](README.es.md) | [日本語](README.ja.md) | [Deutsch](README.de.md)
 
 Construye los servicios de un [laboratorio de contenedores de MitsuruTech](https://mitsurutech.co.uk/es/help/labs) a partir del
 repositorio público de GitHub de un profesor, y publica cada imagen en

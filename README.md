@@ -1,6 +1,6 @@
 # lab-builder: build container lab images from a teacher's public GitHub repository
 
-[English](README.md) | [Français](README.fr.md) | [日本語](README.ja.md) | [Español](README.es.md)
+[English](README.md) | [Français](README.fr.md) | [Español](README.es.md) | [日本語](README.ja.md) | [Deutsch](README.de.md)
 
 Builds the services of a [MitsuruTech container lab](https://mitsurutech.co.uk/help/labs) from a
 teacher's public GitHub repository, and publishes each image to
